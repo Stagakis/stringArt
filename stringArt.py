@@ -57,10 +57,8 @@ def compareImages(gene_image, target):
     new_target = np.add(gene_image,target,dtype=np.int32)
     new_target[new_target>255] = 255
 
-    dist = np.subtract(new_target, np.full((image_size,image_size), 255, np.uint8), dtype=np.int32)
-    dist = np.count_nonzero(np.abs(dist))
+    dist = np.count_nonzero(new_target)
 
-    #print(np.sum(dist))
     #a = np.array(new_target, dtype=np.uint8)
     #cv2.imshow("NEWTARGET", a)
     #cv2.waitKey(0)
@@ -203,8 +201,8 @@ if (__name__ == "__main__"):
         worst_gene_of_generation_score = evaluation[indeces_sorted[1]]
         test_length = len(gene_list[indeces_sorted[-1]].pins)
 
-        print("Length of best gene:           " + str(len(gene_list[indeces_sorted[-1]].pins)))
-        print("Best abs score of generation:  " + str(evaluation_abs[indeces_sorted[-1]]))
+        print("Length of best gene:                 " + str(len(gene_list[indeces_sorted[-1]].pins)))
+        print("Best abs score of generation:        " + str(evaluation_abs[indeces_sorted[-1]]))
         print("SecondBest abs score of generation:  " + str(evaluation_abs[indeces_sorted[-2]]))
         print("ThridBest abs score of generation:   " + str(evaluation_abs[indeces_sorted[-3]]))
 
