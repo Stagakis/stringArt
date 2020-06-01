@@ -5,25 +5,27 @@ from math import sin,cos,floor, sqrt
 import random
 import time
 
-target_image_name = "target_final_by_hand.png"
+target_image_name = "target_final_new.png"
 target_preprocessed = True
 
-image_size = 512 #Assume square image
+image_size = 640 #Assume square image
 offset_x = image_size/2
 offset_y = image_size/2
 
 number_of_genes = 600
-intial_gene_length = 400
+intial_gene_length = 350
 survival_threshold = 0.90
 mutate_chance = 0.05
 grow_chance = 0.1
 
-number_of_pins = 160
+number_of_pins = 180
 pin_size = 2
 line_thickness = 1
 line_color = 0
 
 class Gene:
+    valid_strings = np.zeros((number_of_pins,number_of_pins), np.uint8)
+
     def __init__(self, gene_length = -1):
         if(gene_length == -1):
             return
@@ -160,7 +162,7 @@ if (__name__ == "__main__"):
 
     if(not target_preprocessed):
         target = cv2.resize(target,(image_size,image_size))
-        target = cv2.medianBlur(target,5)
+        target = cv2.medianBlur(target,7)
         target = cv2.adaptiveThreshold(target,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
                 cv2.THRESH_BINARY,9,4)
         roundifyImage(target)
@@ -172,6 +174,25 @@ if (__name__ == "__main__"):
 
     drawLine(canvas, pins[0], pins[1])
 
+    valid_strings = np.zeros((number_of_pins,number_of_pins), np.uint8)
+    for i in range(0, number_of_pins):
+        for j in range(0, number_of_pins):
+            temp_canvas = np.full((image_size,image_size), 0, np.uint8)
+            pin1 = pins[i]
+            pin2 = pins[j]
+            point1 = (floor(offset_x + pin1[0]), floor(offset_y + pin1[1]))
+            point2 = (floor(offset_x + pin2[0]), floor(offset_y + pin2[1]))
+            cv2.line(temp_canvas, point1, point2, 255-line_color, line_thickness)
+            my_cost = compareImages(temp_canvas, target)
+            #print("i/j " + str(i) +"/" +str(j) + " Cost: " + str(my_cost))
+            if(my_cost == np.count_nonzero(target==0)):
+                valid_strings[i,j] = False
+            else: 
+                valid_strings[i,j] = True
+                #print("==NOT BANNED  i/j " + str(i) +"/" + str(j))  
+    print("Number of valid:     " + str(np.count_nonzero(valid_strings==True)))
+    print("Number of non-valid: " + str(np.count_nonzero(valid_strings==False)))
+    Gene.valid_strings = valid_strings.copy()
 
     generation = 1
     #Initialize Genes
