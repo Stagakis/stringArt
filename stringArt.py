@@ -76,6 +76,7 @@ def compareImages(gene_image, target):
 
     #a = np.array(new_target, dtype=np.uint8)
     #cv2.imshow("NEWTARGET", a)
+    #cv2.imshow("gene_image", gene_image)
     #cv2.waitKey(0)
 
     return np.sum(dist)
@@ -86,6 +87,11 @@ def evaluateGene(gene, target, pins):
     #gene_image = np.full((image_size,image_size), 0, np.uint8)
     #pin_indeces = gene.pins
     #[cv2.line(gene_image, (floor(offset_x + pins[pin_indeces[i]][0]), floor(offset_y + pins[pin_indeces[i]][1])), (floor(offset_x + pins[pin_indeces[i+1]][0]), floor(offset_y + pins[pin_indeces[i+1]][1])), 255-line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
+
+    #a = np.array(new_target, dtype=np.uint8)
+    #cv2.imshow("NEWTARGET", a)
+    #cv2.imshow("gene_image", gene_image)
+    #cv2.waitKey(0)
 
     length_factor = 1
     if(len(gene.pins) > intial_gene_length):
@@ -112,7 +118,7 @@ def drawGene(gene, pins): #OBSOLETE, TESTING PURPOSES ONLY
 
 def saveGene(gene, pins, name, generation, score): #OBSOLETE, TESTING PURPOSES ONLY
     gene_image = gene.getGeneImage(pins)
-    cv2.imwrite("genes/GEN2" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", gene_image)
+    cv2.imwrite("genes/GEN_ULTIMATE" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", gene_image)
 
 def drawPins(canvas, pins):
     for i in range(0, len(pins)):
@@ -191,9 +197,7 @@ if (__name__ == "__main__"):
         for j in range(0, number_of_pins):
             if(i==j):
                 valid_strings[i,j] = False
-            else:
                 continue
-
             temp_canvas = np.full((image_size,image_size), 0, np.uint8)
             pin1 = pins[i]
             pin2 = pins[j]
@@ -294,7 +298,7 @@ if (__name__ == "__main__"):
         mutate = [random.random()<mutate_chance for i in range(0, len(survived_genes))]
         grow = [random.random()<grow_chance for i in range(0, len(survived_genes))]
         [survived_genes[i].mutate() for i in range(0, len(survived_genes)) if mutate[i]]
-        [survived_genes[i].grow() for i in range(0, len(survived_genes)) if grow[i]]
+        [survived_genes[i].grow() for i in range(0, len(survived_genes)) if grow[i] and len(survived_genes[i].pins) < intial_gene_length]
 
         ###Setting up for next round
         gene_list = survived_genes.copy()
