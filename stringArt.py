@@ -12,7 +12,7 @@ image_size = 640 #Assume square image
 offset_x = image_size/2
 offset_y = image_size/2
 
-number_of_genes = 600
+number_of_genes = 650
 intial_gene_length = 400
 survival_threshold = 0.90
 mutate_chance = 0.05
@@ -105,7 +105,7 @@ def saveGene(gene, pins, name, generation, score): #OBSOLETE, TESTING PURPOSES O
     gene_image = np.full((image_size,image_size), 255, np.uint8)
     pin_indeces = gene.pins
     [cv2.line(gene_image, (floor(offset_x + pins[pin_indeces[i]][0]), floor(offset_y + pins[pin_indeces[i]][1])), (floor(offset_x + pins[pin_indeces[i+1]][0]), floor(offset_y + pins[pin_indeces[i+1]][1])), line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
-    cv2.imwrite("genes/GEN" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", gene_image)
+    cv2.imwrite("genes/GEN2" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", gene_image)
 
 def drawPins(canvas, pins):
     for i in range(0, len(pins)):
@@ -194,7 +194,7 @@ if (__name__ == "__main__"):
             cv2.line(temp_canvas, point1, point2, 255-line_color, line_thickness)
             my_cost = compareImages(temp_canvas, target)
             #print("i/j " + str(i) +"/" +str(j) + " Cost: " + str(my_cost))
-            if(np.count_nonzero(target==0) - my_cost < 2):
+            if(np.count_nonzero(target==0) - my_cost <= 1):
                 valid_strings[i,j] = False
             else: 
                 valid_strings[i,j] = True
