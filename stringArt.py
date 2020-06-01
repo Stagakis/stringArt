@@ -29,28 +29,31 @@ class Gene:
     def __init__(self, gene_length = -1):
         if(gene_length == -1):
             return
-        self.pins = [random.randint(0, number_of_pins - 1) for i in range(0, gene_length)]
+        self.pins = [ [random.randint(0, number_of_pins - 1), random.randint(0, number_of_pins - 1)] for i in range(0, gene_length)]
         self.cleanDuplicates()
 
     def cleanDuplicates(self):
-        self.pins = [self.pins[i] for i in range(0, len(self.pins) - 1) if Gene.valid_strings[self.pins[i],self.pins[i+1]] ]
-        self.pins.append(self.pins[-1])
+        self.pins = [ [self.pins[i][0], self.pins[i][1]] for i in range(0, len(self.pins) - 1) if Gene.valid_strings[self.pins[i][0],self.pins[i][1]] and not [self.pins[i][0],self.pins[i][1]] in self.pins[i+1:] ]
+        if([self.pins[-1][0], self.pins[-1][1]] in self.pins[:-1]):
+            self.pins = self.pins[:-1].copy()
 
     def mutate(self):
         index = random.randint(0, len(self.pins) - 1)
         while(True):
-            new_pin = random.randint(0, number_of_pins - 1)
-            if(Gene.valid_strings[new_pin,self.pins[index]] and Gene.valid_strings[new_pin,self.pins[max(0,index-1)]] and Gene.valid_strings[new_pin,self.pins[min(len(self.pins) - 1, index+1)]]):
-                self.pins[index] = new_pin
+            new_pin1 = random.randint(0, number_of_pins - 1)
+            new_pin2 = random.randint(0, number_of_pins - 1)
+            if(Gene.valid_strings[new_pin1, new_pin2] and not [new_pin1, new_pin2] in self.pins):
+                self.pins[index] = [new_pin1, new_pin2]
                 break
             else:
                 continue
 
     def grow(self):
         while(True):
-            new_pin = random.randint(0, number_of_pins - 1)
-            if(Gene.valid_strings[new_pin,self.pins[-1]]):
-                self.pins.append(new_pin)
+            new_pin1 = random.randint(0, number_of_pins - 1)
+            new_pin2 = random.randint(0, number_of_pins - 1)
+            if(Gene.valid_strings[new_pin1,new_pin2] and not [new_pin1, new_pin2] in self.pins):
+                self.pins.append([new_pin1, new_pin2])
                 break
             else:
                 continue
@@ -58,7 +61,13 @@ class Gene:
     def getGeneImage(self, pins_global):
         gene_image = np.full((image_size,image_size), 0, np.uint8)
         pin_indeces = self.pins
-        [cv2.line(gene_image, (floor(offset_x + pins_global[pin_indeces[i]][0]), floor(offset_y +pins_global[pin_indeces[i]][1])), (floor(offset_x + pins_global[pin_indeces[i+1]][0]), floor(offset_y + pins_global[pin_indeces[i+1]][1])), 255-line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
+
+        #point1 = (floor(offset_x + pins_global[pin_indeces[i][0]][0]), floor(offset_y + pins_global[pin_indeces[i][0]][1]))
+        #point2 = (floor(offset_x + pins_global[pin_indeces[i][1]][0]), floor(offset_y + pins_global[pin_indeces[i][1]][1]))
+        #[cv2.line(gene_image, point1, point2 , 255-line_color, line_thickness) for i in range(0, len(pin_indeces))]
+
+        [cv2.line(gene_image, (floor(offset_x + pins_global[pin_indeces[i][0]][0]), floor(offset_y + pins_global[pin_indeces[i][0]][1])), (floor(offset_x + pins_global[pin_indeces[i][1]][0]), floor(offset_y + pins_global[pin_indeces[i][1]][1])) , 255-line_color, line_thickness) for i in range(0, len(pin_indeces))]
+
         return gene_image
 
 def compareImages(gene_image, target):
@@ -102,9 +111,7 @@ def drawGene(gene, pins): #OBSOLETE, TESTING PURPOSES ONLY
     cv2.imshow("GEN", gene_image)
 
 def saveGene(gene, pins, name, generation, score): #OBSOLETE, TESTING PURPOSES ONLY
-    gene_image = np.full((image_size,image_size), 255, np.uint8)
-    pin_indeces = gene.pins
-    [cv2.line(gene_image, (floor(offset_x + pins[pin_indeces[i]][0]), floor(offset_y + pins[pin_indeces[i]][1])), (floor(offset_x + pins[pin_indeces[i+1]][0]), floor(offset_y + pins[pin_indeces[i+1]][1])), line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
+    gene_image = gene.getGeneImage(pins)
     cv2.imwrite("genes/GEN2" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", gene_image)
 
 def drawPins(canvas, pins):
@@ -115,10 +122,9 @@ def drawPins(canvas, pins):
         canvas[y_pos-pin_size:y_pos+pin_size, x_pos-pin_size:x_pos+pin_size] = 0
 
 def createNewGene(gene1, gene2):
-    
-    new_gene = Gene()
+
+    new_gene1 = Gene()
     new_gene2 = Gene()
-    #return new_gene, new_gene2
 
     length1 = len(gene1.pins)
     length2 = len(gene2.pins)
@@ -127,30 +133,30 @@ def createNewGene(gene1, gene2):
     point1 = random.randint(0, min_length - 10)
     point2 = random.randint(point1 + 1, min_length)
 
-    new_gene.pins = gene1.pins.copy()
+    new_gene1.pins = gene1.pins.copy()
     new_gene2.pins = gene2.pins.copy()
 
-    new_gene.pins[point1:point2]  = gene2.pins[point1:point2]
+    new_gene1.pins[point1:point2]  = gene2.pins[point1:point2]
     new_gene2.pins[point1:point2] = gene1.pins[point1:point2]
 
-    new_gene.cleanDuplicates()
+    new_gene1.cleanDuplicates()
     new_gene2.cleanDuplicates()
 
-    new_gene.mutate()
+    new_gene1.mutate()
     new_gene2.mutate()
 
-    if(gene1.pins == new_gene.pins or gene1.pins == new_gene2.pins or gene2.pins == new_gene.pins or gene2.pins == new_gene2.pins):
+    if(gene1.pins == new_gene1.pins or gene1.pins == new_gene2.pins or gene2.pins == new_gene1.pins or gene2.pins == new_gene2.pins):
         print("Point1/Point2 " + str(point1) +"/"+str(point2) )
         print("Old1 " + str(gene1.pins))
         print("Old2 " + str(gene2.pins))
         
-        print("New1 " + str(new_gene.pins))
+        print("New1 " + str(new_gene1.pins))
         print("New2 " + str(new_gene2.pins))
 
 
 
 
-    return new_gene, new_gene2
+    return new_gene1, new_gene2
 
 def roundifyImage(target):
     radius = image_size/2
@@ -185,7 +191,9 @@ if (__name__ == "__main__"):
         for j in range(0, number_of_pins):
             if(i==j):
                 valid_strings[i,j] = False
+            else:
                 continue
+
             temp_canvas = np.full((image_size,image_size), 0, np.uint8)
             pin1 = pins[i]
             pin2 = pins[j]
@@ -245,8 +253,8 @@ if (__name__ == "__main__"):
                 if(gene_list[i].pins == gene_list[j].pins):
                     counter = counter+1
                     js.append(j)
-            if(counter>1):
-                print("WHAT THE FUCK IT'S THE SAME GENE  " + str(counter-1) + " i/j " + str(i) +"/" +str(js[1:]))
+            #if(counter>1):
+                #print("WHAT THE FUCK IT'S THE SAME GENE  " + str(counter-1) + " i/j " + str(i) +"/" +str(js[1:]))
 
 
         if(generation % 20 == 0):
