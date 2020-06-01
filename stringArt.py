@@ -13,12 +13,12 @@ offset_x = image_size/2
 offset_y = image_size/2
 
 number_of_genes = 600
-intial_gene_length = 350
+intial_gene_length = 400
 survival_threshold = 0.90
 mutate_chance = 0.05
-grow_chance = 0.1
+grow_chance = 0.15
 
-number_of_pins = 180
+number_of_pins = 360
 pin_size = 2
 line_thickness = 1
 line_color = 0
@@ -33,28 +33,33 @@ class Gene:
         self.cleanDuplicates()
 
     def cleanDuplicates(self):
-        self.pins = [self.pins[i] for i in range(0, len(self.pins) - 1) if self.pins[i]!=self.pins[i+1]]
+        self.pins = [self.pins[i] for i in range(0, len(self.pins) - 1) if Gene.valid_strings[self.pins[i],self.pins[i+1]] ]
         self.pins.append(self.pins[-1])
 
     def mutate(self):
         index = random.randint(0, len(self.pins) - 1)
-        
         while(True):
             new_pin = random.randint(0, number_of_pins - 1)
-            if(new_pin == self.pins[index] or new_pin == self.pins[max(0,index-1)] or new_pin == self.pins[min(len(self.pins) - 1, index+1)]):
-                continue
-            else:
+            if(Gene.valid_strings[new_pin,self.pins[index]] and Gene.valid_strings[new_pin,self.pins[max(0,index-1)]] and Gene.valid_strings[new_pin,self.pins[min(len(self.pins) - 1, index+1)]]):
                 self.pins[index] = new_pin
                 break
+            else:
+                continue
 
     def grow(self):
         while(True):
             new_pin = random.randint(0, number_of_pins - 1)
-            if(new_pin == self.pins[-1]):
-                continue
-            else:
+            if(Gene.valid_strings[new_pin,self.pins[-1]]):
                 self.pins.append(new_pin)
                 break
+            else:
+                continue
+
+    def getGeneImage(self, pins_global):
+        gene_image = np.full((image_size,image_size), 0, np.uint8)
+        pin_indeces = self.pins
+        [cv2.line(gene_image, (floor(offset_x + pins_global[pin_indeces[i]][0]), floor(offset_y +pins_global[pin_indeces[i]][1])), (floor(offset_x + pins_global[pin_indeces[i+1]][0]), floor(offset_y + pins_global[pin_indeces[i+1]][1])), 255-line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
+        return gene_image
 
 def compareImages(gene_image, target):
     new_target = np.add(gene_image,target,dtype=np.int32)
@@ -67,10 +72,11 @@ def compareImages(gene_image, target):
     return np.sum(dist)
 
 def evaluateGene(gene, target, pins):
-    gene_image = np.full((image_size,image_size), 0, np.uint8)
-    pin_indeces = gene.pins
-    
-    [cv2.line(gene_image, (floor(offset_x + pins[pin_indeces[i]][0]), floor(offset_y + pins[pin_indeces[i]][1])), (floor(offset_x + pins[pin_indeces[i+1]][0]), floor(offset_y + pins[pin_indeces[i+1]][1])), 255-line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
+    gene_image = gene.getGeneImage(pins)
+
+    #gene_image = np.full((image_size,image_size), 0, np.uint8)
+    #pin_indeces = gene.pins
+    #[cv2.line(gene_image, (floor(offset_x + pins[pin_indeces[i]][0]), floor(offset_y + pins[pin_indeces[i]][1])), (floor(offset_x + pins[pin_indeces[i+1]][0]), floor(offset_y + pins[pin_indeces[i+1]][1])), 255-line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
 
     length_factor = 1
     if(len(gene.pins) > intial_gene_length):
@@ -177,6 +183,9 @@ if (__name__ == "__main__"):
     valid_strings = np.zeros((number_of_pins,number_of_pins), np.uint8)
     for i in range(0, number_of_pins):
         for j in range(0, number_of_pins):
+            if(i==j):
+                valid_strings[i,j] = False
+                continue
             temp_canvas = np.full((image_size,image_size), 0, np.uint8)
             pin1 = pins[i]
             pin2 = pins[j]
@@ -185,7 +194,7 @@ if (__name__ == "__main__"):
             cv2.line(temp_canvas, point1, point2, 255-line_color, line_thickness)
             my_cost = compareImages(temp_canvas, target)
             #print("i/j " + str(i) +"/" +str(j) + " Cost: " + str(my_cost))
-            if(my_cost == np.count_nonzero(target==0)):
+            if(np.count_nonzero(target==0) - my_cost < 2):
                 valid_strings[i,j] = False
             else: 
                 valid_strings[i,j] = True
