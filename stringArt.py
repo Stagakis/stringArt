@@ -5,19 +5,23 @@ from math import sin,cos,floor, sqrt
 import random
 import time
 
+#Image size and preprocessing parameters
 target_image_name = "target_final_new.png"
 target_preprocessed = True
+image_size = 720 #Assume square image
+pixel_threshold_for_valid_string = 3
 
-image_size = 640 #Assume square image
-offset_x = image_size/2
-offset_y = image_size/2
-
-number_of_genes = 650
-intial_gene_length = 400
+#Gene parameters
+number_of_genes = 600
+intial_gene_length = 500
 survival_threshold = 0.90
 mutate_chance = 0.05
+num_of_mutates_in_new_genes = 2
 grow_chance = 0.15
 
+#General
+offset_x = image_size/2
+offset_y = image_size/2
 number_of_pins = 360
 pin_size = 2
 line_thickness = 1
@@ -84,10 +88,6 @@ def compareImages(gene_image, target):
 def evaluateGene(gene, target, pins):
     gene_image = gene.getGeneImage(pins)
 
-    #gene_image = np.full((image_size,image_size), 0, np.uint8)
-    #pin_indeces = gene.pins
-    #[cv2.line(gene_image, (floor(offset_x + pins[pin_indeces[i]][0]), floor(offset_y + pins[pin_indeces[i]][1])), (floor(offset_x + pins[pin_indeces[i+1]][0]), floor(offset_y + pins[pin_indeces[i+1]][1])), 255-line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
-
     #a = np.array(new_target, dtype=np.uint8)
     #cv2.imshow("NEWTARGET", a)
     #cv2.imshow("gene_image", gene_image)
@@ -117,8 +117,8 @@ def drawGene(gene, pins): #OBSOLETE, TESTING PURPOSES ONLY
     cv2.imshow("GEN", gene_image)
 
 def saveGene(gene, pins, name, generation, score): #OBSOLETE, TESTING PURPOSES ONLY
-    gene_image = gene.getGeneImage(pins)
-    cv2.imwrite("genes/GEN_ULTIMATE" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", gene_image)
+    gene_image = 255 - gene.getGeneImage(pins)
+    cv2.imwrite("genes/GEN_720" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", gene_image)
 
 def drawPins(canvas, pins):
     for i in range(0, len(pins)):
@@ -136,21 +136,30 @@ def createNewGene(gene1, gene2):
     length2 = len(gene2.pins)
     min_length = min(length1, length2)
 
-    point1 = random.randint(0, min_length - 10)
-    point2 = random.randint(point1 + 1, min_length)
+    point1 = random.randint(0, min_length)
+    point2 = random.randint(0, min_length)
+    while(abs(point1-point2) < 10):
+        point2 = random.randint(0, min_length)
+
+    if(point1>point2):
+        temp = point1
+        point1 = point2
+        point2 = temp
 
     new_gene1.pins = gene1.pins.copy()
     new_gene2.pins = gene2.pins.copy()
 
-    new_gene1.pins[point1:point2]  = gene2.pins[point1:point2]
-    new_gene2.pins[point1:point2] = gene1.pins[point1:point2]
+    new_gene1.pins[point1:point2]  = gene2.pins[point1:point2].copy()
+    new_gene2.pins[point1:point2] = gene1.pins[point1:point2].copy()
 
     new_gene1.cleanDuplicates()
     new_gene2.cleanDuplicates()
 
-    new_gene1.mutate()
-    new_gene2.mutate()
+    for i in range(0, num_of_mutates_in_new_genes):
+        new_gene1.mutate()
+        new_gene2.mutate()
 
+    """
     if(gene1.pins == new_gene1.pins or gene1.pins == new_gene2.pins or gene2.pins == new_gene1.pins or gene2.pins == new_gene2.pins):
         print("Point1/Point2 " + str(point1) +"/"+str(point2) )
         print("Old1 " + str(gene1.pins))
@@ -158,9 +167,7 @@ def createNewGene(gene1, gene2):
         
         print("New1 " + str(new_gene1.pins))
         print("New2 " + str(new_gene2.pins))
-
-
-
+    """
 
     return new_gene1, new_gene2
 
@@ -170,7 +177,7 @@ def roundifyImage(target):
     for i in range(0,target.shape[0]):
         for j in range(0, target.shape[1]):
             dist = sqrt( (i - image_center[0])**2 + (j - image_center[1])**2)
-            if(dist >= radius):
+            if(dist >= radius-1):
                 target[i,j] = 255
 
 
@@ -179,18 +186,23 @@ if (__name__ == "__main__"):
     target = cv2.imread(target_image_name, cv2.IMREAD_GRAYSCALE)
 
     if(not target_preprocessed):
-        target = cv2.resize(target,(image_size,image_size))
+        target = cv2.resize(target,(image_size,image_size), interpolation=cv2.INTER_CUBIC)
         target = cv2.medianBlur(target,7)
         target = cv2.adaptiveThreshold(target,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
                 cv2.THRESH_BINARY,9,4)
         roundifyImage(target)
         cv2.imwrite("target_final.png", target)
+    else:
+        target = cv2.resize(target,(image_size,image_size), interpolation=cv2.INTER_NEAREST)
 
+    #print("Target image size: " + str(target.shape))
+    #cv2.imshow("Target_after_resizing", target)
+    #cv2.waitKey(0)
 
     pins = generatePins(number_of_pins)
-    drawPins(canvas, pins)
-
-    drawLine(canvas, pins[0], pins[1])
+    
+    #drawPins(canvas, pins)
+    #drawLine(canvas, pins[0], pins[1])
 
     valid_strings = np.zeros((number_of_pins,number_of_pins), np.uint8)
     for i in range(0, number_of_pins):
@@ -206,7 +218,7 @@ if (__name__ == "__main__"):
             cv2.line(temp_canvas, point1, point2, 255-line_color, line_thickness)
             my_cost = compareImages(temp_canvas, target)
             #print("i/j " + str(i) +"/" +str(j) + " Cost: " + str(my_cost))
-            if(np.count_nonzero(target==0) - my_cost <= 1):
+            if(np.abs(np.count_nonzero(target==0) - my_cost) <= pixel_threshold_for_valid_string):
                 valid_strings[i,j] = False
             else: 
                 valid_strings[i,j] = True
