@@ -18,7 +18,7 @@ survival_threshold = 0.90
 mutate_chance = 0.05
 grow_chance = 0.1
 
-number_of_pins = 81
+number_of_pins = 160
 pin_size = 2
 line_thickness = 1
 line_color = 0
@@ -56,9 +56,7 @@ class Gene:
 
 def compareImages(gene_image, target):
     new_target = np.add(gene_image,target,dtype=np.int32)
-    new_target[new_target>255] = 255
-
-    dist = np.count_nonzero(255-new_target)
+    dist = np.count_nonzero(new_target==0)
 
     #a = np.array(new_target, dtype=np.uint8)
     #cv2.imshow("NEWTARGET", a)
