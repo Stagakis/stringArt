@@ -6,14 +6,14 @@ import random
 import time
 
 #Image size and preprocessing parameters
-target_image_name = "target_final_new.png"
+target_image_name = "target_final_new_thin.png"
 target_preprocessed = True
 image_size = 720 #Assume square image
 pixel_threshold_for_valid_string = 3
 
 #Gene parameters
 number_of_genes = 600
-intial_gene_length = 500
+intial_gene_length = 450
 survival_threshold = 0.90
 mutate_chance = 0.05
 num_of_mutates_in_new_genes = 2
@@ -22,7 +22,7 @@ grow_chance = 0.15
 #General
 offset_x = image_size/2
 offset_y = image_size/2
-number_of_pins = 360
+number_of_pins = 120
 pin_size = 2
 line_thickness = 1
 line_color = 0
@@ -116,9 +116,16 @@ def drawGene(gene, pins): #OBSOLETE, TESTING PURPOSES ONLY
     [cv2.line(gene_image, (floor(offset_x + pins[pin_indeces[i]][0]), floor(offset_y + pins[pin_indeces[i]][1])), (floor(offset_x + pins[pin_indeces[i+1]][0]), floor(offset_y + pins[pin_indeces[i+1]][1])), line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
     cv2.imshow("GEN", gene_image)
 
-def saveGene(gene, pins, name, generation, score): #OBSOLETE, TESTING PURPOSES ONLY
+def saveGene(gene, target, pins, name, generation, score): #OBSOLETE, TESTING PURPOSES ONLY
     gene_image = 255 - gene.getGeneImage(pins)
-    cv2.imwrite("genes/GEN_720" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", gene_image)
+
+    new_target = np.add(255 - gene_image, target, dtype=np.int32)
+    new_target[new_target>255] = 255
+    a = np.array(new_target, dtype=np.uint8)
+
+    out_image = cv2.hconcat([target, gene_image, a])
+
+    cv2.imwrite("genes/GEN_trio" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", out_image)
 
 def drawPins(canvas, pins):
     for i in range(0, len(pins)):
@@ -149,7 +156,7 @@ def createNewGene(gene1, gene2):
     new_gene1.pins = gene1.pins.copy()
     new_gene2.pins = gene2.pins.copy()
 
-    new_gene1.pins[point1:point2]  = gene2.pins[point1:point2].copy()
+    new_gene1.pins[point1:point2] = gene2.pins[point1:point2].copy()
     new_gene2.pins[point1:point2] = gene1.pins[point1:point2].copy()
 
     new_gene1.cleanDuplicates()
@@ -274,7 +281,7 @@ if (__name__ == "__main__"):
 
 
         if(generation % 20 == 0):
-            saveGene(best_gene_of_generation, pins, "best", generation, evaluation_abs[indeces_sorted[-1]])
+            saveGene(best_gene_of_generation, target, pins, "best", generation, evaluation_abs[indeces_sorted[-1]])
             #saveGene(gene_list[indeces_sorted[-2]], pins, "SecondBest", generation, evaluation[indeces_sorted[-2]])
             #saveGene(gene_list[indeces_sorted[-3]], pins, "ThirdBest", generation, evaluation[indeces_sorted[-3]])
 
