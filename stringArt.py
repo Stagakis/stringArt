@@ -6,23 +6,23 @@ import random
 import time
 
 #Image size and preprocessing parameters
-target_image_name = "target_final_new_thin.png"
+target_image_name = "target_final_new_erode_331.png"
 target_preprocessed = True
-image_size = 720 #Assume square image
-pixel_threshold_for_valid_string = 3
+image_size = 1960 #Assume square image
+pixel_threshold_for_valid_string = 1
 
 #Gene parameters
-number_of_genes = 600
-intial_gene_length = 450
+number_of_genes = 650
+intial_gene_length = 700
 survival_threshold = 0.90
 mutate_chance = 0.05
-num_of_mutates_in_new_genes = 2
+num_of_mutates_in_new_genes = 15
 grow_chance = 0.15
 
 #General
 offset_x = image_size/2
 offset_y = image_size/2
-number_of_pins = 120
+number_of_pins = 480
 pin_size = 2
 line_thickness = 1
 line_color = 0
@@ -35,6 +35,8 @@ class Gene:
             return
         self.pins = [ [random.randint(0, number_of_pins - 1), random.randint(0, number_of_pins - 1)] for i in range(0, gene_length)]
         self.cleanDuplicates()
+        while(len(self.pins) < gene_length):
+            self.grow()
 
     def cleanDuplicates(self):
         self.pins = [ [self.pins[i][0], self.pins[i][1]] for i in range(0, len(self.pins) - 1) if Gene.valid_strings[self.pins[i][0],self.pins[i][1]] and not [self.pins[i][0],self.pins[i][1]] in self.pins[i+1:] ]
@@ -93,11 +95,7 @@ def evaluateGene(gene, target, pins):
     #cv2.imshow("gene_image", gene_image)
     #cv2.waitKey(0)
 
-    length_factor = 1
-    if(len(gene.pins) > intial_gene_length):
-        length_factor = length_factor + 0.02*(len(gene.pins) - intial_gene_length)
-
-    return compareImages(gene_image, target)*length_factor
+    return compareImages(gene_image, target)
     
 def generatePins(N):
     radius = image_size/2
@@ -110,13 +108,7 @@ def drawLine(canvas, pin1, pin2):
     point2 = (floor(offset_x + pin2[0]), floor(offset_y + pin2[1]))
     cv2.line(canvas, point1, point2, line_color, line_thickness)
 
-def drawGene(gene, pins): #OBSOLETE, TESTING PURPOSES ONLY
-    gene_image = np.full((image_size,image_size), 255, np.uint8)
-    pin_indeces = gene.pins
-    [cv2.line(gene_image, (floor(offset_x + pins[pin_indeces[i]][0]), floor(offset_y + pins[pin_indeces[i]][1])), (floor(offset_x + pins[pin_indeces[i+1]][0]), floor(offset_y + pins[pin_indeces[i+1]][1])), line_color, line_thickness) for i in range(0, len(pin_indeces) - 1)]
-    cv2.imshow("GEN", gene_image)
-
-def saveGene(gene, target, pins, name, generation, score): #OBSOLETE, TESTING PURPOSES ONLY
+def saveGene(gene, target, pins, name, generation, score): 
     gene_image = 255 - gene.getGeneImage(pins)
 
     new_target = np.add(255 - gene_image, target, dtype=np.int32)
@@ -125,7 +117,7 @@ def saveGene(gene, target, pins, name, generation, score): #OBSOLETE, TESTING PU
 
     out_image = cv2.hconcat([target, gene_image, a])
 
-    cv2.imwrite("genes/GEN_trio" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", out_image)
+    cv2.imwrite("genes/GEN" + "_" + str(name) +"_" + str(generation) +"_"+ str(score)+ "_" + str(len(gene.pins)) +"_" + ".png", out_image)
 
 def drawPins(canvas, pins):
     for i in range(0, len(pins)):
@@ -184,13 +176,20 @@ def roundifyImage(target):
     for i in range(0,target.shape[0]):
         for j in range(0, target.shape[1]):
             dist = sqrt( (i - image_center[0])**2 + (j - image_center[1])**2)
-            if(dist >= radius-1):
+            if(dist >= radius):
                 target[i,j] = 255
 
 
 if (__name__ == "__main__"):
     canvas = np.full((image_size,image_size), 255, np.uint8)
     target = cv2.imread(target_image_name, cv2.IMREAD_GRAYSCALE)
+    #cv2.imshow("Target_original", target)
+    #target_enlarged = cv2.resize(target,(2*image_size,2*image_size), interpolation=cv2.INTER_NEAREST)
+    #kernel = np.ones((3,3), np.uint8) 
+    #target_eroded = cv2.erode(255-target_enlarged, kernel, iterations=1) 
+    #target_eroded = cv2.resize(target_eroded,(image_size,image_size), interpolation=cv2.INTER_NEAREST)
+    #cv2.imshow("Eroded", 255-target_eroded)
+    #cv2.waitKey(0)
 
     if(not target_preprocessed):
         target = cv2.resize(target,(image_size,image_size), interpolation=cv2.INTER_CUBIC)
@@ -202,17 +201,14 @@ if (__name__ == "__main__"):
     else:
         target = cv2.resize(target,(image_size,image_size), interpolation=cv2.INTER_NEAREST)
 
-    #print("Target image size: " + str(target.shape))
-    #cv2.imshow("Target_after_resizing", target)
-    #cv2.waitKey(0)
+    
+
 
     pins = generatePins(number_of_pins)
-    
-    #drawPins(canvas, pins)
-    #drawLine(canvas, pins[0], pins[1])
 
-    valid_strings = np.zeros((number_of_pins,number_of_pins), np.uint8)
+    valid_strings = np.zeros((number_of_pins,number_of_pins), np.uint8) 
     for i in range(0, number_of_pins):
+        print("Valid strings Loop: " + str(i) + " out of " + str(number_of_pins))
         for j in range(0, number_of_pins):
             if(i==j):
                 valid_strings[i,j] = False
@@ -224,12 +220,12 @@ if (__name__ == "__main__"):
             point2 = (floor(offset_x + pin2[0]), floor(offset_y + pin2[1]))
             cv2.line(temp_canvas, point1, point2, 255-line_color, line_thickness)
             my_cost = compareImages(temp_canvas, target)
-            #print("i/j " + str(i) +"/" +str(j) + " Cost: " + str(my_cost))
             if(np.abs(np.count_nonzero(target==0) - my_cost) <= pixel_threshold_for_valid_string):
                 valid_strings[i,j] = False
             else: 
-                valid_strings[i,j] = True
-                #print("==NOT BANNED  i/j " + str(i) +"/" + str(j))  
+                valid_strings[i,j] = True 
+    
+
     print("Number of valid:     " + str(np.count_nonzero(valid_strings==True)))
     print("Number of non-valid: " + str(np.count_nonzero(valid_strings==False)))
     Gene.valid_strings = valid_strings.copy()
@@ -323,19 +319,3 @@ if (__name__ == "__main__"):
         gene_list = survived_genes.copy()
         generation = generation + 1
         #break
-        
-
-
-    gene1 = Gene(intial_gene_length)
-    gene2 = Gene(intial_gene_length)
-    print(gene1.pins)
-
-    print(evaluateGene(gene1, target, pins))
-    createNewGene(gene1, gene1)
-
-    drawGene(gene1, pins)
-
-    cv2.imshow("canvas", canvas)
-    cv2.imshow("target", target)
-    cv2.waitKey(0)
-
